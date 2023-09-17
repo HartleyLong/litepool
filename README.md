@@ -5,6 +5,7 @@ litePool is a goroutine pool developed in Golang. It features low memory usage, 
 
 ```
 go get -u github.com/HartleyLong/litepool
+
 ```
 
 example
@@ -34,11 +35,12 @@ func randomDelay(min, max int) {
 func main() {
 	// 初始化一个新的协程池
 	// Initialize a new coroutine pool.
-	lite := litepool.NewPool(5, 5)
+	lp := litepool.NewPool(5, 5)
+	defer lp.Close()
 	// The first parameter is the number of coroutine pools, the second parameter is the maximum task queue for each coroutine pool.
 	// 第一个参数是协程池的数量，第二个参数是每个协程池的最大任务队列。
 	n := 1000
-	lite.Add(n) // If you need to use wait to wait for all tasks to be completed, please set the task number in advance.
+	lp.Add(n) // If you need to use wait to wait for all tasks to be completed, please set the task number in advance.
 	// 如果要使用wait等待所有任务完成，请预先设置任务数量。
 	// Special note: If you need to complete manually, please set lite.Done() when returning nil in SetTask.
 	// 特别说明，如果需要手动完成，请在SetTask里 return nil的时候设置lite.Done()
@@ -62,8 +64,13 @@ func main() {
 			// 当任务执行发生错误时的回调
 			// Callback when there's an error in task execution.
 			SetOnError(func(handle *litepool.ErrHandle, err error) {
-				handle.ErrReload(1) // Retry once.
-				fmt.Println(err)
+				handle.ErrReload(3, func(err error) {
+					fmt.Println(err)
+					if err != nil {
+						//发生错误不会自动done
+						lp.Done()
+					}
+				}) // Retry once.
 			}).
 			// 当任务完成（无论成功或失败）时的回调
 			// Callback when the task completes (whether successful or not).
@@ -91,19 +98,19 @@ func main() {
 
 		// 添加任务到协程池
 		// Add the task to the coroutine pool.
-		lite.AddTask(opt)
+		lp.AddTask(opt)
 	}
 	// 等待所有任务完成
 	// Wait for all tasks to complete.
-	lite.Wait()
-	lite.Usage()
+	lp.Wait()
+	lp.Usage()
 	// Usage 用于输出每个协程的运行信息
 	// Usage is used to print out the runtime information of each goroutine
-	lite.Close()
 	// 调用 runtime.GC() 以立即释放内存
 	// Call runtime.GC() to release memory immediately.
 	//runtime.GC()
 }
+
 ```
 
 
