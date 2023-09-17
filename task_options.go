@@ -36,7 +36,7 @@ type ErrHandle struct {
 	// Corresponding goroutine pool.
 }
 
-func (eh *ErrHandle) ErrReload(reNum int) error {
+func (eh *ErrHandle) ErrReload(reNum int, afterFunc func()) error {
 	// 任务发生错误回调的重试，次数为-1的话会请求到error为nil为止
 	// Retry the task when an error callback occurs. If the retry count is -1, it will retry until error is nil.
 	// 由于任务失败回调的时候没有done 所以这里可以done
@@ -47,6 +47,9 @@ func (eh *ErrHandle) ErrReload(reNum int) error {
 	defer func() {
 		// 记得收回这个占用线程
 		if eh.opt.autoDone && err == nil {
+			if afterFunc != nil {
+				afterFunc()
+			}
 			eh.lp.Done()
 		}
 		// Remember to reclaim the occupied thread.
