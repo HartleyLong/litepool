@@ -107,7 +107,7 @@ func (lp *ListPool) run(n int64, index bool) error {
 							// If there is no panic, execute the successful callback
 							f.onSuccess()
 						}
-						if r == nil {
+						if r == nil && f.onError == nil {
 							// 执行完毕success函数后才执行done
 							// Only execute done after the success function is completed
 							if f.autoDone {
