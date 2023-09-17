@@ -1,8 +1,6 @@
 package litepool
 
 import (
-	"fmt"
-	"log"
 	"time"
 )
 
@@ -48,17 +46,17 @@ func (eh *ErrHandle) ErrReload(reNum int) error {
 	var err error
 	defer func() {
 		// 记得收回这个占用线程
-		// Remember to reclaim the occupied thread.
-		if eh.opt.autoDone {
+		if eh.opt.autoDone && err == nil {
 			eh.lp.Done()
 		}
+		// Remember to reclaim the occupied thread.
 		eh.lp.idleRun <- n // 完成后释放
 		// Release after completion.
 	}()
 	if reNum < 1 { // 当重试次数<1则为无限
 		// If the retry count is less than 1, it means infinite retries.
 		for i := 1; i > -1; i++ {
-			log.Println(fmt.Sprintf("重试次数%v,重试第%v次", reNum, i))
+			//log.Println(fmt.Sprintf("重试次数%v,重试第%v次", reNum, i))
 			// Logging the retry count and the current attempt number.
 			err = eh.opt.task()
 			if err == nil {
@@ -67,7 +65,7 @@ func (eh *ErrHandle) ErrReload(reNum int) error {
 		}
 	}
 	for i := 1; i <= reNum; i++ {
-		log.Println(fmt.Sprintf("重试次数%v,重试第%v次", reNum, i))
+		//log.Println(fmt.Sprintf("重试次数%v,重试第%v次", reNum, i))
 		// Logging the retry count and the current attempt number.
 		err = eh.opt.task()
 		if err == nil {

@@ -119,10 +119,12 @@ func (lp *ListPool) run(n int64, index bool) error {
 						if f.onComplete != nil {
 							f.onComplete()
 						}
-						if len(lp.task[n]) == 0 {
-							lp.idle <- n
-						} else {
-							lp.idleRun <- n
+						if !lp.close {
+							if len(lp.task[n]) == 0 {
+								lp.idle <- n
+							} else {
+								lp.idleRun <- n
+							}
 						}
 						lp.heap.Done(n)
 					}()

@@ -12,6 +12,7 @@ func (lp *ListPool) Close() {
 
 	// Step 2: Close all the channels
 	close(lp.quit)
+	//return
 	for _, ch := range lp.task {
 		for i := 0; i < len(ch); i++ {
 			_ = <-ch

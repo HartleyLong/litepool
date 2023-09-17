@@ -34,7 +34,7 @@ func NewPool(maxProcess int64, jobQueuelen int) *ListPool {
 		// Goroutines that can work
 		jobQueuelen: jobQueuelen,
 		maxProcess:  int(maxProcess),
-		idle:        make(chan int64, maxProcess),
+		idle:        make(chan int64, maxProcess*2),
 		mutex:       sync.Mutex{},
 		heap:        NewIntHeap(maxProcess, int64(jobQueuelen)), // 创建一个新的整数堆
 		// Create a new integer heap

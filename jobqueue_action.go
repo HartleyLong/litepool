@@ -169,9 +169,9 @@ func (h *IntHeap) Close() {
 	for k := range h.offlineWorker {
 		delete(h.offlineWorker, k)
 	}
-	h.Count = nil
-	h.Keys = nil
-	h.offlineWorker = nil
+	//h.Count = nil
+	//h.Keys = nil
+	//h.offlineWorker = nil
 }
 
 // job动态管理，开发停滞中。。。
