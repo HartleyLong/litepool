@@ -1,16 +1,20 @@
 # litepool
-LitePool协程池特点是低内存，高稳定，易使用，任务状态回调，协程池运行信息的监测等
+litePool是用Golang开发的协程池。它的特点是低内存使用、任务状态回调以及协程池状态的监测。
+
+litePool is a goroutine pool developed in Golang. It features low memory usage, task status callbacks, and the ability to monitor the state of the coroutine pool.
+
+```
+go get -u github.com/HartleyLong/litepool
+```
 
 example
-
-go get -u github.com/HartleyLong/litepool
-
 
 以下代码进行了1000次的随机5-500毫秒耗时任务:
 The following code carried out 1,000 tasks that took a random time between 5 to 500 milliseconds.
 
 
-```package main
+```
+package main
 
 import (
 	"fmt"
