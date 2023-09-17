@@ -41,20 +41,20 @@ func (lp *ListPool) run(n int64, index bool) error {
 		defer func() {
 			// 收回工作状态，此时len lp.statusWorker[n]==0
 			// Retract the working state, at which point len lp.statusWorker[n]==0
-			<-lp.statusWorker[n]
-			lp.heap.Delete(n) // 从job队列中删除
-			// Remove from job queue
-			// 收回可接收的任务
-			// Withdraw acceptable tasks
-			for i := 0; i < lp.jobQueuelen; i++ {
-				_ = <-lp.idleRun
+			if !lp.close {
+				<-lp.statusWorker[n]
+				// 收回可接收的任务
+				// Withdraw acceptable tasks
+				for i := 0; i < lp.jobQueuelen; i++ {
+					_ = <-lp.idleRun
+				}
+				<-lp.idle // 收回可用协程
+				// Retrieving available processes
+				lp.workRun <- n // 告诉通道我可以工作了
+				// Tell the channel that I can work now
+				lp.heap.statusDone <- n // 发送关闭协程给job接口监听
+				// Send the shutdown protocol to the job interface for listening
 			}
-			<-lp.idle // 收回可用协程
-			// Retrieving available processes
-			lp.workRun <- n // 告诉通道我可以工作了
-			// Tell the channel that I can work now
-			lp.heap.statusDone <- n // 发送关闭协程给job接口监听
-			// Send the shutdown protocol to the job interface for listening
 		}()
 		// 发送job队列（可用任务队列）给通道
 		// Send job queue (available task queue) to channel
@@ -66,8 +66,12 @@ func (lp *ListPool) run(n int64, index bool) error {
 		for {
 			select {
 			case <-lp.ctx.Done():
+				//close(lp.task[n])
+				//close(lp.statusWorker[n])
 				return
 			case <-lp.quit:
+				lp.heap.Delete(n) // 从job队列中删除
+				// Remove from job queue
 				// 收到了减少协程池的信号
 				// Received the signal to reduce the coroutine pool
 				// 判断是否有job
@@ -169,44 +173,4 @@ func (lp *ListPool) Usage() {
 		// Print the ID of the goroutine, the number of executions, and the total execution time
 		fmt.Println("My goroutine ID is", n, "I have executed tasks", lp.numCount[n], "times", "My total execution time for tasks is:", lp.timeCount[n].Milliseconds(), "milliseconds")
 	}
-}
-
-// 添加一个方法来优雅地关闭协程池
-func (lp *ListPool) Close() {
-	lp.wg.Wait()
-	// Step 1: Cancel the associated context
-	if lp.cancel != nil {
-		lp.cancel()
-	}
-
-	// Step 2: Close all the channels
-	close(lp.quit)
-	for _, ch := range lp.task {
-		close(ch)
-	}
-	for _, ch := range lp.statusWorker {
-		close(ch)
-	}
-	close(lp.poolAction)
-	close(lp.idleRun)
-	close(lp.workRun)
-	close(lp.idle)
-
-	// Step 3: Wait for all goroutines to complete
-
-	// Step 4: Clean up resources
-	lp.task = nil
-	lp.numCount = nil
-	lp.timeCount = nil
-	lp.statusWorker = nil
-	lp.poolAction = nil
-	lp.quit = nil
-	lp.idleRun = nil
-	lp.workRun = nil
-	lp.idle = nil
-	if lp.heap != nil {
-		lp.heap.Close()
-		lp.heap = nil
-	}
-	lp.close = true
 }
