@@ -41,18 +41,18 @@ func (lp *ListPool) Close() {
 	// Step 3: Wait for all goroutines to complete
 
 	// Step 4: Clean up resources
-	lp.task = nil
-	lp.numCount = nil
-	lp.timeCount = nil
-	lp.statusWorker = nil
-	lp.poolAction = nil
-	lp.quit = nil
-	lp.idleRun = nil
-	lp.workRun = nil
-	lp.idle = nil
+	//lp.task = nil
+	//lp.numCount = nil
+	//lp.timeCount = nil
+	//lp.statusWorker = nil
+	//lp.poolAction = nil
+	//lp.quit = nil
+	//lp.idleRun = nil
+	//lp.workRun = nil
+	//lp.idle = nil
 	if lp.heap != nil {
 		lp.heap.Close()
-		lp.heap = nil
+		//lp.heap = nil
 	}
-	lp = nil
+	//lp = nil
 }
