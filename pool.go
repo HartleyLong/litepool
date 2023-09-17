@@ -94,16 +94,15 @@ func (lp *ListPool) run(n int64, index bool) error {
 				func() {
 					defer func() {
 						r := recover()
-						if r != nil {
-							if f.onError != nil {
-								// 执行错误的回调
-								// Execute the error callback
-								f.onError(&ErrHandle{
-									lp:  lp,
-									opt: f,
-								}, fmt.Errorf("task panicked: %v", r))
-							}
-						} else if f.onSuccess != nil {
+						if r != nil && f.onError != nil {
+							// 执行错误的回调
+							// Execute the error callback
+							f.onError(&ErrHandle{
+								lp:  lp,
+								opt: f,
+							}, fmt.Errorf("task panicked: %v", r))
+						}
+						if r == nil && f.onSuccess != nil && err == nil {
 							// 如果没有panic，执行成功的回调
 							// If there is no panic, execute the successful callback
 							f.onSuccess()
@@ -131,15 +130,13 @@ func (lp *ListPool) run(n int64, index bool) error {
 					err = f.task() // 执行任务
 					// Execute the task
 					lp.timeCount[n] += time.Since(start)
-					if err != nil {
-						if f.onError != nil {
-							// 执行错误的回调
-							// Execute the error callback
-							f.onError(&ErrHandle{
-								lp:  lp,
-								opt: f,
-							}, err)
-						}
+					if err != nil && f.onError != nil {
+						// 执行错误的回调
+						// Execute the error callback
+						f.onError(&ErrHandle{
+							lp:  lp,
+							opt: f,
+						}, err)
 					}
 				}()
 			}
