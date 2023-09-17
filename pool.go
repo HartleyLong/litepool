@@ -90,6 +90,7 @@ func (lp *ListPool) run(n int64, index bool) error {
 				// Count of tasks processed by the coroutine
 				// 错误处理：防止panic导致工作协程终止
 				// Error handling: prevent panic causing worker coroutine to terminate
+				var err error
 				func() {
 					defer func() {
 						r := recover()
@@ -107,7 +108,7 @@ func (lp *ListPool) run(n int64, index bool) error {
 							// If there is no panic, execute the successful callback
 							f.onSuccess()
 						}
-						if r == nil && f.onError == nil {
+						if r == nil && err == nil {
 							// 执行完毕success函数后才执行done
 							// Only execute done after the success function is completed
 							if f.autoDone {
@@ -127,7 +128,7 @@ func (lp *ListPool) run(n int64, index bool) error {
 						lp.heap.Done(n)
 					}()
 					start := time.Now()
-					err := f.task() // 执行任务
+					err = f.task() // 执行任务
 					// Execute the task
 					lp.timeCount[n] += time.Since(start)
 					if err != nil {
