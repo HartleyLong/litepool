@@ -40,7 +40,7 @@ func main() {
 	// The first parameter is the number of coroutine pools, the second parameter is the maximum task queue for each coroutine pool.
 	// 第一个参数是协程池的数量，第二个参数是每个协程池的最大任务队列。
 	n := 1000
-	lp.Add(n) // If you need to use wait to wait for all tasks to be completed, please set the task number in advance.
+	tg := lp.NewTaskGroup(n) // If you need to use wait to wait for all tasks to be completed, please set the task number in advance.
 	// 如果要使用wait等待所有任务完成，请预先设置任务数量。
 	// Special note: If you need to complete manually, please set lite.Done() when returning nil in SetTask.
 	// 特别说明，如果需要手动完成，请在SetTask里 return nil的时候设置lite.Done()
@@ -52,7 +52,7 @@ func main() {
 
 		// 定义任务选项
 		// Define the task options.
-		opt := litepool.NewTaskOptions().
+		opt := tg.NewTaskOptions().
 			// 当任务成功执行时的回调
 			// Callback when the task is executed successfully.
 			SetOnSuccess(func() {
@@ -68,7 +68,7 @@ func main() {
 					fmt.Println(err)
 					if err != nil {
 						//发生错误不会自动done
-						lp.Done()
+						tg.Done()
 					}
 				}) // Retry once.
 			}).
@@ -89,10 +89,10 @@ func main() {
 			SetAutoDone().
 			// 设置任务超时时长
 			// Set the task timeout duration.
-			SetTimeout(time.Second).
+			SetAddTimeout(time.Second).
 			// 设置任务超时回调
 			// Set the callback for when the task times out.
-			SetonTimeout(func() {
+			SetOnAddTimeout(func() {
 				// The callback when not added to the task queue within the custom time.
 			})
 
@@ -102,7 +102,7 @@ func main() {
 	}
 	// 等待所有任务完成
 	// Wait for all tasks to complete.
-	lp.Wait()
+	tg.Wait()
 	lp.Usage()
 	// Usage 用于输出每个协程的运行信息
 	// Usage is used to print out the runtime information of each goroutine
@@ -110,6 +110,7 @@ func main() {
 	// Call runtime.GC() to release memory immediately.
 	//runtime.GC()
 }
+
 
 ```
 
