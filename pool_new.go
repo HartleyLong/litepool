@@ -4,59 +4,8 @@ import (
 	"container/heap"
 	"context"
 	"sync"
-	"sync/atomic"
 	"time"
 )
-
-type chanCount struct {
-	task  []*int64
-	mutex sync.Mutex
-}
-
-func NewChanCount(size int) *chanCount {
-	cc := &chanCount{
-		task: make([]*int64, size),
-	}
-
-	for i := range cc.task {
-		val := int64(0)
-		cc.task[i] = &val
-	}
-
-	return cc
-}
-
-func (cc *chanCount) taskAdd(n int64) {
-	cc.mutex.Lock()
-	defer cc.mutex.Unlock()
-	for {
-		oldVal := atomic.LoadInt64(cc.task[n])
-		if atomic.CompareAndSwapInt64(cc.task[n], oldVal, oldVal+1) {
-			// Update succeeded!
-			break
-		}
-		time.Sleep(time.Nanosecond)
-	}
-}
-
-func (cc *chanCount) taskDone(n int64) {
-	cc.mutex.Lock()
-	defer cc.mutex.Unlock()
-	for {
-		oldVal := atomic.LoadInt64(cc.task[n])
-		if atomic.CompareAndSwapInt64(cc.task[n], oldVal, oldVal-1) {
-			// Update succeeded!
-			break
-		}
-		time.Sleep(time.Nanosecond)
-	}
-}
-
-func (cc *chanCount) taskLoad(n int64) int64 {
-	cc.mutex.Lock()
-	defer cc.mutex.Unlock()
-	return atomic.LoadInt64(cc.task[n])
-}
 
 func NewPool(maxProcess int64, jobQueuelen int) *ListPool {
 	// 使用给定的背景创建一个新的带取消功能的上下文。
@@ -89,7 +38,6 @@ func NewPool(maxProcess int64, jobQueuelen int) *ListPool {
 		mutex:       sync.Mutex{},
 		heap:        NewIntHeap(maxProcess, int64(jobQueuelen)), // 创建一个新的整数堆
 		// Create a new integer heap
-		chanCount: NewChanCount(int(maxProcess) + jobQueuelen),
 	}
 
 	// 初始化整数堆
