@@ -45,7 +45,6 @@ type ListPool struct {
 	// Mutex for synchronization.
 	heap *IntHeap // job的优先级算法
 	// Priority algorithm for jobs.
-	chanCount *chanCount
 }
 
 // poolAction 结构体用于描述协程池的操作，如新增和退出协程
