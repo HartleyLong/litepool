@@ -17,8 +17,6 @@ type ListPool struct {
 	// Record execution time for each goroutine.
 	statusWorker []chan struct{} // 记录每个协程的状态
 	// Record the status of each goroutine.
-	wg sync.WaitGroup // 用于等待所有协程完成
-	// Used to wait for all goroutines to complete.
 	poolAction chan poolAction // 用于管理协程池的通道
 	// Channel used for managing the goroutine pool.
 	quit chan struct{} // 关闭通道，用于停止协程
@@ -45,6 +43,7 @@ type ListPool struct {
 	// Mutex for synchronization.
 	heap *IntHeap // job的优先级算法
 	// Priority algorithm for jobs.
+	TaskGroupList []*TaskGroup
 }
 
 // poolAction 结构体用于描述协程池的操作，如新增和退出协程

@@ -23,6 +23,7 @@ type TaskOptions struct {
 	// Retry count for the task.
 	autoDone bool // 是否自动完成任务
 	// Whether to automatically finish the task.
+	tg *TaskGroup
 }
 
 // ErrHandle 结构体定义了错误处理的方式
@@ -41,7 +42,7 @@ func (eh *ErrHandle) ErrReload(reNum int, afterFunc func(error)) {
 	// Retry the task when an error callback occurs. If the retry count is -1, it will retry until error is nil.
 	// 由于任务失败回调的时候没有done 所以这里可以done
 	// Since there's no "done" during the task failure callback, it can be done here.
-	n := <-eh.lp.idleRun // 取出一个可以执行任务的协程
+	//n := <-eh.lp.idleRun // 取出一个可以执行任务的协程
 	// Fetch a goroutine that can execute the task.
 	var err error
 	defer func() {
@@ -50,10 +51,10 @@ func (eh *ErrHandle) ErrReload(reNum int, afterFunc func(error)) {
 			afterFunc(err)
 		}
 		if eh.opt.autoDone && err == nil {
-			eh.lp.Done()
+			eh.opt.tg.wg.Done()
 		}
 		// Remember to reclaim the occupied thread.
-		eh.lp.idleRun <- n // 完成后释放
+		//eh.lp.idleRun <- n // 完成后释放
 		// Release after completion.
 	}()
 	if reNum < 1 { // 当重试次数<1则为无限
@@ -78,8 +79,8 @@ func (eh *ErrHandle) ErrReload(reNum int, afterFunc func(error)) {
 	return
 }
 
-func NewTaskOptions() *TaskOptions {
-	return &TaskOptions{}
+func (tg *TaskGroup) NewTaskOptions() *TaskOptions {
+	return &TaskOptions{tg: tg}
 }
 func (t *TaskOptions) SetTask(f func() error) *TaskOptions {
 	t.task = f
@@ -106,12 +107,12 @@ func (t *TaskOptions) SetOnComplete(f func()) *TaskOptions {
 	return t
 }
 
-func (t *TaskOptions) SetTimeout(duration time.Duration) *TaskOptions {
+func (t *TaskOptions) SetAddTimeout(duration time.Duration) *TaskOptions {
 	t.waitTimeOut = duration
 	return t
 }
 
-func (t *TaskOptions) SetonTimeout(f func()) *TaskOptions {
+func (t *TaskOptions) SetOnAddTimeout(f func()) *TaskOptions {
 	t.onTimeout = f
 	return t
 }

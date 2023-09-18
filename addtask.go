@@ -56,7 +56,7 @@ func (lp *ListPool) AddTask(opt *TaskOptions) error {
 				// Handle timeout scenario
 			}
 			if opt.autoDone {
-				lp.Done() // 自动标记任务完成
+				opt.tg.wg.Done() // 自动标记任务完成
 				// Automatically mark the task as done
 			}
 			return errors.New("任务超时")

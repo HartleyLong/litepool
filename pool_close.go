@@ -2,9 +2,11 @@ package litepool
 
 // 添加一个方法来优雅地关闭协程池
 func (lp *ListPool) Close() {
+	for _, tg := range lp.TaskGroupList {
+		tg.Wait()
+	}
 	//printMemUsage()
 	lp.close = true
-	lp.wg.Wait()
 	// Step 1: Cancel the associated context
 	if lp.cancel != nil {
 		lp.cancel()

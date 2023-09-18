@@ -111,7 +111,7 @@ func (lp *ListPool) run(n int64, index bool) error {
 							// 执行完毕success函数后才执行done
 							// Only execute done after the success function is completed
 							if f.autoDone {
-								lp.Done()
+								f.tg.wg.Done()
 							}
 						}
 						// 无论任务是否成功，都执行onComplete回调
@@ -147,28 +147,13 @@ func (lp *ListPool) run(n int64, index bool) error {
 	return nil
 }
 
-// add、done、wait 的使用请参考 sync.WaitGroup
-// For the usage of add, done, and wait, please refer to sync.WaitGroup
-func (lp *ListPool) Add(d int) {
-	lp.wg.Add(d)
-}
-
-func (lp *ListPool) Done() {
-	lp.wg.Done()
-}
-
-func (lp *ListPool) Wait() {
-	lp.wg.Wait()
-	//lp.Usage()
-}
-
 // Usage 用于输出每个协程的运行信息
 // Usage is used to print out the runtime information of each goroutine
 func (lp *ListPool) Usage() {
 	for n, t := range lp.task {
 		// 输出指定协程的正在运行的任务数
 		// Print the number of tasks that are still running for a specified goroutine
-		fmt.Println(fmt.Sprintf("Goroutine %v is still running, with a total of %v jobs", n, len(t)))
+		fmt.Println(fmt.Sprintf("Goroutine %v, with a total of %v jobs", n, len(t)))
 		// 输出协程的ID，执行次数，以及总执行时间
 		// Print the ID of the goroutine, the number of executions, and the total execution time
 		fmt.Println("My goroutine ID is", n, "I have executed tasks", lp.numCount[n], "times", "My total execution time for tasks is:", lp.timeCount[n].Milliseconds(), "milliseconds")
