@@ -1,10 +1,78 @@
 # litepool
 litePool是用Golang开发的协程池。它的特点是低内存使用、任务状态回调以及协程池状态的监测。
 
-litePool is a goroutine pool developed in Golang. It features low memory usage, task status callbacks, and the ability to monitor the state of the coroutine pool.
-
 ```
 go get -u github.com/HartleyLong/litepool
+
+```
+
+```
+package main
+
+import (
+	"errors"
+	"github.com/HartleyLong/litepool"
+	"math/rand"
+	"time"
+)
+
+func main() {
+	// 创建一个协程池，其中有5个协程和一个大小为10的任务队列
+	lp := litepool.NewPool(5, 10)
+	// 确保在主函数结束时关闭协程池
+	defer lp.Close()
+
+	// 定义一个任务的数量为1000
+	n := 1000
+	// 为这些任务创建一个任务组
+	tg := lp.NewTaskGroup(n)
+
+	// 循环添加任务到协程池
+	for i := 0; i < n; i++ {
+		// 定义任务选项
+		opt := tg.NewTaskOptions().
+			// 设置任务内容
+			SetTask(func() error {
+				// 任务的执行会随机暂停0到2毫秒
+				time.Sleep(time.Millisecond * time.Duration(rand.Intn(3)))
+
+				// 有1/3的机率任务会返回错误
+				if rand.Intn(3) == 1 {
+					return errors.New("error")
+				}
+				return nil
+			}).
+			// 如果任务执行出错，则执行以下内容
+			SetOnError(func(handle *litepool.ErrHandle, err error) {
+				// 尝试重新加载任务最多3次
+				handle.ErrReload(3, func(err error) {
+					// 如果任务连续3次执行失败，标记任务为完成状态
+					if err != nil {
+						tg.Done()
+					}
+				})
+			}).
+			// 任务成功执行后调用此函数
+			SetOnSuccess(func() {
+
+			}).
+			// 任务完成后（无论成功或失败）调用此函数
+			SetOnComplete(func() {
+
+			}).
+			// 设置任务完成后自动标记为完成状态
+			SetAutoDone()
+
+		// 向协程池添加任务
+		lp.AddTask(opt)
+	}
+
+	// 等待所有任务完成
+	tg.Wait()
+
+	// 输出协程池的使用情况
+	lp.Usage()
+}
 
 ```
 
