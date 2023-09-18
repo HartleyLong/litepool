@@ -29,6 +29,28 @@ type IntHeap struct {
 	jobQueuelen   int64              // 工作队列长度，当count>=这个数表示队列满了
 }
 
+func (h *IntHeap) countAdd(n int64) {
+	for {
+		oldVal := atomic.LoadInt64(h.Count[n])
+		if atomic.CompareAndSwapInt64(h.Count[n], oldVal, oldVal+1) {
+			// Update succeeded!
+			break
+		}
+		time.Sleep(time.Nanosecond)
+	}
+}
+
+func (h *IntHeap) countDone(n int64) {
+	for {
+		oldVal := atomic.LoadInt64(h.Count[n])
+		if atomic.CompareAndSwapInt64(h.Count[n], oldVal, oldVal-1) {
+			// Update succeeded!
+			break
+		}
+		time.Sleep(time.Nanosecond)
+	}
+}
+
 // NewIntHeap 初始化一个新的IntHeap
 func NewIntHeap(maxProcess, jobQueuelen int64) *IntHeap {
 	return &IntHeap{
@@ -113,14 +135,14 @@ func (h *IntHeap) Pop() interface{} {
 		return nil
 	}
 	//每次pop这个值就加1，然后重新排序
-	atomic.AddInt64(h.Count[id], 1)
+	h.countAdd(id)
 	heap.Fix(h, n-1) // 重新排序堆，确保其属性
 	return id
 }
 
 // Add 增加工作者的工作计数，并重新排序堆
 func (h *IntHeap) Add(n int64) {
-	atomic.AddInt64(h.Count[n], 1)
+	h.countAdd(n)
 	index, exists := h.KeyMap[n]
 	if !exists {
 		return
@@ -130,7 +152,7 @@ func (h *IntHeap) Add(n int64) {
 
 // Done 减少工作者的工作计数，并重新排序堆
 func (h *IntHeap) Done(n int64) {
-	atomic.AddInt64(h.Count[n], -1)
+	h.countDone(n)
 	index, exists := h.KeyMap[n]
 	if !exists {
 		return
@@ -157,10 +179,10 @@ func (h *IntHeap) jobQueueaction(ctx context.Context) {
 // Close gracefully shuts down the IntHeap by closing channels and stopping goroutines
 func (h *IntHeap) Close() {
 	// Close all channels
-	close(h.statusAdd)
-	close(h.statusDone)
-	close(h.jobAdd)
-	close(h.jobDone)
+	//close(h.statusAdd)
+	//close(h.statusDone)
+	//close(h.jobAdd)
+	//close(h.jobDone)
 
 	// Clear data structures
 	for k := range h.KeyMap {

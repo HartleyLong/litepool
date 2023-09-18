@@ -11,33 +11,33 @@ func (lp *ListPool) Close() {
 	}
 
 	// Step 2: Close all the channels
-	close(lp.quit)
+	//close(lp.quit)
 	//return
 	for _, ch := range lp.task {
 		for i := 0; i < len(ch); i++ {
 			_ = <-ch
 		}
-		close(ch)
+		//close(ch)
 	}
 	for _, ch := range lp.statusWorker {
 		for i := 0; i < len(ch); i++ {
 			_ = <-ch
 		}
-		close(ch)
+		//close(ch)
 	}
-	close(lp.poolAction)
+	//close(lp.poolAction)
 	for i := 0; i < len(lp.idleRun); i++ {
 		<-lp.idleRun
 	}
-	close(lp.idleRun)
+	//close(lp.idleRun)
 	for i := 0; i < len(lp.workRun); i++ {
 		<-lp.workRun
 	}
-	close(lp.workRun)
+	//close(lp.workRun)
 	for i := 0; i < len(lp.idle); i++ {
 		<-lp.idle
 	}
-	close(lp.idle)
+	//close(lp.idle)
 
 	// Step 3: Wait for all goroutines to complete
 

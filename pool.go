@@ -20,7 +20,7 @@ func (lp *ListPool) run(n int64, index bool) error {
 	if lp.task[n] == nil {
 		// 初始化通道
 		// Initialize channel
-		lp.task[n] = make(chan *TaskOptions, lp.jobQueuelen)
+		lp.task[n] = make(chan *TaskOptions, lp.jobQueuelen+1)
 	}
 	if lp.statusWorker[n] == nil {
 		// 初始化通道
