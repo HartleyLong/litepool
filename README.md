@@ -1,10 +1,21 @@
 # litepool
-litePool是用Golang开发的协程池。它的特点是低内存使用、任务状态回调以及协程池状态的监测。
+
+LitePool 是一个用 Golang 开发的协程池。它具有以下特点：
+
+低内存使用：优化了资源管理，确保高效的内存使用。
+
+任务状态回调：可以实时追踪任务的状态并进行相应的响应。
+
+错误的重试机制：当任务出错时，LitePool 提供了重新执行任务的机制，增加任务完成的成功率。
+
+灵活的任务定义：LitePool 的设计允许用户使用闭包或接口来定义任务。这意味着你可以选择最适合的方式来描述任务逻辑，不论是使用简单的函数闭包还是更结构化的接口形式，LitePool 都能够完美支持。
+
 
 ```
 go get -u github.com/HartleyLong/litepool
-
 ```
+
+使用闭包来执行任务
 
 ```
 package main
@@ -43,12 +54,12 @@ func main() {
 				return nil
 			}).
 			// 如果任务执行出错，则执行以下内容
-			SetOnError(func(handle *litepool.ErrHandle, err error) {
+			SetOnError(func(handle *litepool.ErrHandle, tg1 *litepool.TaskGroup, err error) {
 				// 尝试重新加载任务最多3次
 				handle.ErrReload(3, func(err error) {
 					// 如果任务连续3次执行失败，标记任务为完成状态
 					if err != nil {
-						tg.Done()
+						tg1.Done()
 					}
 				})
 			}).
@@ -71,6 +82,112 @@ func main() {
 	tg.Wait()
 
 	// 输出协程池的使用情况
+	lp.Usage()
+}
+
+```
+
+使用接口来执行任务
+
+```
+package main
+
+import (
+	"errors"
+	"fmt"
+	"github.com/HartleyLong/litepool"
+	"math/rand"
+	"sync"
+	"time"
+)
+
+// myTask 结构体定义了一个任务和它的状态
+type myTask struct {
+	count int
+	n     int
+	mu    sync.Mutex // 用于保护 count 和 n 的并发修改
+}
+
+// Exec 是任务的主要执行函数
+func (mt *myTask) Exec() error {
+	// 模拟一个耗时的任务
+	time.Sleep(time.Millisecond)
+	// 更新任务状态
+	mt.mu.Lock()
+	mt.count++
+	mt.mu.Unlock()
+	// 随机产生一个错误
+	if rand.Intn(3) == 1 {
+		return nil
+	}
+	return errors.New("故意错误")
+}
+
+// OnSuccess 任务成功后的回调函数
+func (mt *myTask) OnSuccess() {
+	mt.mu.Lock()
+	mt.n++
+	mt.mu.Unlock()
+}
+
+// OnError 任务出错时的回调函数
+func (mt *myTask) OnError(handle *litepool.ErrHandle, tg *litepool.TaskGroup, err error) {
+	if err != nil {
+		// 任务失败后，尝试重新执行任务
+		handle.ErrReload(-1, func(err error) {
+			fmt.Println(mt.count)
+			mt.mu.Lock()
+			mt.n++
+			mt.mu.Unlock()
+			//假设重试次数不是-1
+			if err != nil {
+				tg.Done()
+			}
+		})
+		// 注意: 这里的 -1 意味着无限重试，应当在实际应用中慎重考虑
+	}
+}
+
+// OnComplete 任务完成后（无论成功还是失败）的回调函数
+func (mt *myTask) OnComplete() {
+
+}
+
+func main() {
+	// 设置随机数种子，确保每次的错误随机生成
+	rand.Seed(time.Now().UnixNano())
+
+	// 创建一个协程池，包含5个协程和一个任务队列大小为10
+	lp := litepool.NewPool(5, 10)
+	// 使用 defer 确保 main 函数结束时关闭协程池
+	defer lp.Close()
+
+	// 定义任务的数量
+	n := 1000
+	// 创建一个任务组
+	tg := lp.NewTaskGroup(n)
+	mt := &myTask{count: 1}
+	// 循环添加任务到协程池
+	for i := 0; i < n; i++ {
+		opt := tg.NewTaskOptions().
+			// 使用接口设置任务内容
+			SetTaskWithInterface(mt).
+			// 使用接口设置任务出错时的回调
+			SetOnErrorWithInterface(mt).
+			// 使用接口设置任务成功后的回调
+			SetOnSuccessWithInterface(mt).
+			// 使用接口设置任务完成后的回调
+			SetOnCompleteWithInterface(mt).
+			// 确保任务完成后自动标记为完成状态
+			SetAutoDone()
+		// 将任务添加到协程池中
+		lp.AddTask(opt)
+	}
+	// 等待所有任务完成
+	tg.Wait()
+	// 输出结果以验证所有任务是否都执行了
+	fmt.Println(mt.n == n)
+	// 打印协程池的使用情况
 	lp.Usage()
 }
 

@@ -94,30 +94,18 @@ func (lp *ListPool) run(n int64, index bool) error {
 				func() {
 					defer func() {
 						r := recover()
+						// 无论任务是否成功，都执行onComplete回调
+						// Execute the onComplete callback whether the task is successful or not
+						if f.onComplete != nil {
+							f.onComplete()
+						}
 						if r != nil && f.onError != nil {
 							// 执行错误的回调
 							// Execute the error callback
 							f.onError(&ErrHandle{
 								lp:  lp,
 								opt: f,
-							}, fmt.Errorf("task panicked: %v", r))
-						}
-						if r == nil && f.onSuccess != nil && err == nil {
-							// 如果没有panic，执行成功的回调
-							// If there is no panic, execute the successful callback
-							f.onSuccess()
-						}
-						if r == nil && err == nil {
-							// 执行完毕success函数后才执行done
-							// Only execute done after the success function is completed
-							if f.autoDone {
-								f.tg.wg.Done()
-							}
-						}
-						// 无论任务是否成功，都执行onComplete回调
-						// Execute the onComplete callback whether the task is successful or not
-						if f.onComplete != nil {
-							f.onComplete()
+							}, f.tg, fmt.Errorf("task panicked: %v", r))
 						}
 						if !lp.close {
 							if len(lp.task[n]) == 0 {
@@ -132,13 +120,23 @@ func (lp *ListPool) run(n int64, index bool) error {
 					err = f.task() // 执行任务
 					// Execute the task
 					lp.timeCount[n] += time.Since(start)
+					if f.onSuccess != nil && err == nil {
+						// 如果没有panic，执行成功的回调
+						// If there is no panic, execute the successful callback
+						f.onSuccess()
+					}
+					if err == nil && f.autoDone {
+						// 执行完毕success函数后才执行done
+						// Only execute done after the success function is completed
+						f.tg.wg.Done()
+					}
 					if err != nil && f.onError != nil {
 						// 执行错误的回调
 						// Execute the error callback
 						f.onError(&ErrHandle{
 							lp:  lp,
 							opt: f,
-						}, err)
+						}, f.tg, err)
 					}
 				}()
 			}

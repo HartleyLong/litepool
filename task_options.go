@@ -11,7 +11,7 @@ type TaskOptions struct {
 	// Task to be executed.
 	onSuccess func() // 任务成功执行后的回调
 	// Callback after the task is successfully executed.
-	onError func(*ErrHandle, error) // 任务执行错误的回调
+	onError func(*ErrHandle, *TaskGroup, error) // 任务执行错误的回调
 	// Callback when the task encounters an error.
 	onComplete func() // 任务执行完毕的回调
 	// Callback after the task is completed.
@@ -86,18 +86,13 @@ func (t *TaskOptions) SetTask(f func() error) *TaskOptions {
 	t.task = f
 	return t
 }
+
 func (t *TaskOptions) SetOnSuccess(f func()) *TaskOptions {
 	t.onSuccess = f
 	return t
 }
 
-func (t *TaskOptions) SetAutoDone() *TaskOptions {
-	//all为不管是否发生错误都直接done
-	t.autoDone = true
-	return t
-}
-
-func (t *TaskOptions) SetOnError(f func(*ErrHandle, error)) *TaskOptions {
+func (t *TaskOptions) SetOnError(f func(*ErrHandle, *TaskGroup, error)) *TaskOptions {
 	t.onError = f
 	return t
 }
@@ -106,7 +101,11 @@ func (t *TaskOptions) SetOnComplete(f func()) *TaskOptions {
 	t.onComplete = f
 	return t
 }
-
+func (t *TaskOptions) SetAutoDone() *TaskOptions {
+	//all为不管是否发生错误都直接done
+	t.autoDone = true
+	return t
+}
 func (t *TaskOptions) SetAddTimeout(duration time.Duration) *TaskOptions {
 	t.waitTimeOut = duration
 	return t
