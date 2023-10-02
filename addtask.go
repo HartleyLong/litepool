@@ -79,3 +79,64 @@ func (lp *ListPool) AddTask(opt *TaskOptions) error {
 
 	return nil
 }
+
+type taskGroup struct {
+	n   int64
+	add bool
+}
+
+func (lp *ListPool) AddTaskGroup(opts ...*TaskOptions) error {
+	lp.mutex.Lock()
+	defer lp.mutex.Unlock()
+	// 检查任务是否存在
+	// Check if the task is present
+	for _, opt := range opts {
+		if opt.task == nil {
+			return errors.New("请添加任务")
+		}
+	}
+	ns := []taskGroup{}
+	for range opts {
+		var n int64
+		add := true
+
+		// 检查是否有空闲的协程可用
+		// Check if there are any idle goroutines available
+		if len(lp.idle) > 0 {
+			n = <-lp.idle
+		} else {
+			// 从堆中尝试获取协程
+			// Try to get a goroutine from the heap
+			w := heap.Pop(lp.heap)
+			// TODO: Limit the number of jobs here
+			if w != nil {
+				add = false
+				_ = <-lp.idleRun // 获取一个空闲协程
+				// Fetch an idle goroutine
+				n = w.(int64)
+			} else {
+				n = -1
+			}
+		}
+
+		if n == -1 {
+			n = <-lp.idleRun
+		}
+		ns = append(ns, taskGroup{
+			n:   n,
+			add: add,
+		})
+	}
+	for i, n := range ns {
+		// 将任务发送给选定的协程
+		// Send the task to the selected goroutine
+		lp.task[n.n] <- opts[i]
+
+		// 如果堆中添加了新的协程，更新堆
+		// If a new goroutine was added to the heap, update the heap
+		if n.add {
+			lp.heap.Add(n.n)
+		}
+	}
+	return nil
+}

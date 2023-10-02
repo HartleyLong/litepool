@@ -17,9 +17,11 @@ func (lp *ListPool) NewTaskGroup(taskNum int) *TaskGroup {
 	lp.mutex.Unlock()
 	return tg
 }
+
 func (tg *TaskGroup) Done() {
 	tg.wg.Done()
 }
+
 func (tg *TaskGroup) Wait() {
 	tg.wg.Wait()
 }

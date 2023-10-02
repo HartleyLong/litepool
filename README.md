@@ -10,6 +10,8 @@ LitePool 是一个用 Golang 开发的协程池。它具有以下特点：
 
 灵活的任务定义：LitePool 的设计允许用户使用闭包或接口来定义任务。这意味着你可以选择最适合的方式来描述任务逻辑，不论是使用简单的函数闭包还是更结构化的接口形式，LitePool 都能够完美支持。
 
+支持n个协程作为一个任务组：func (lp *ListPool) AddTaskGroup(opts ...*TaskOptions) error
+
 
 ```
 go get -u github.com/HartleyLong/litepool
